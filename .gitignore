@@ -1,0 +1,6 @@
+# .gitignore
+*.class
+*.jar
+output/
+.idea/
+*.iml
