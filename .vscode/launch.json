@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Rodar Testes",
+            "request": "launch",
+            "mainClass": "org.junit.platform.console.ConsoleLauncher",
+            "args": [
+                "--class-path", "out",
+                "--select-class", "ScannerTest",
+                "--details=verbose"
+            ],
+            "classPaths": ["junit.jar", "out"]
+        }
+    ]
+}
