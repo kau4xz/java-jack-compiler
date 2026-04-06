@@ -1,34 +1,66 @@
 // tests/ScannerTest.java
 import org.junit.jupiter.api.*;
 import java.util.List;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Testes do Scanner do Jack Compiler.
- *
- * Cada método de teste:
- *   1. Prepara uma entrada (código Jack como String)
- *   2. Executa o scanner
- *   3. Verifica o resultado com assertions
- *
- * Convenção de nome: test_<oQueEstaTendoTestado>_<situacao>
- */
 public class ScannerTest {
 
-    // ── Helpers ──────────────────────────────────────────────────────
-
-    /** Cria um scanner e executa, retornando a lista de tokens. */
     private List<Token> tokenize(String code) {
         return new Scanner(code).tokenize();
     }
 
-    /** Filtra o token EOF da lista (não aparece no XML final). */
     private List<Token> semEof(List<Token> tokens) {
         return tokens.stream()
             .filter(t -> t.type != TokenType.EOF)
             .collect(Collectors.toList());
     }
 
-    // Os testes serão adicionados nas próximas fases...
+    // ── FASE 1: Números ──────────────────────────────────────────────
+
+    @Test
+    void numero_simples_reconhecido() {
+        List<Token> tokens = tokenize("289");
+        assertEquals(TokenType.NUMBER, tokens.get(0).type);
+        assertEquals("289", tokens.get(0).lexeme);
+        assertEquals("<integerConstant> 289 </integerConstant>", tokens.get(0).toXml());
+    }
+
+    @Test
+    void numero_com_espacos_ao_redor() {
+        List<Token> tokens = tokenize("  123  ");
+        assertEquals("123", tokens.get(0).lexeme);
+    }
+
+    @Test
+    void zero_reconhecido() {
+        List<Token> tokens = tokenize("0");
+        assertEquals(TokenType.NUMBER, tokens.get(0).type);
+        assertEquals("0", tokens.get(0).lexeme);
+    }
+
+
+    // ── FASE 2: Strings ─────────────────────────────────────────────
+
+    @Test
+    void string_simples_sem_aspas_no_lexema() {
+        // O lexema NÃO deve ter as aspas
+        List<Token> tokens = tokenize("\"hello\"");
+        assertEquals(TokenType.STRING, tokens.get(0).type);
+        assertEquals("hello", tokens.get(0).lexeme);  // sem aspas!
+        assertEquals("<stringConstant> hello </stringConstant>", tokens.get(0).toXml());
+    }
+
+    @Test
+    void string_com_espacos_internos() {
+        List<Token> tokens = tokenize("\"hello world\"");
+        assertEquals("hello world", tokens.get(0).lexeme);
+    }
+
+    @Test
+    void string_nao_fechada_lanca_excecao() {
+        // Se a string não fechar, deve lançar RuntimeException
+        assertThrows(RuntimeException.class, () -> tokenize("\"aberta"));
+}
 }
