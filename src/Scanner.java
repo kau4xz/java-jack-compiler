@@ -105,6 +105,8 @@ public class Scanner {
                 tokens.add(readNumber());
             } else if (ch == '"') {
                 tokens.add(readString());
+            } else if (Character.isLetter(ch) || ch == '_') {
+                tokens.add(readIdentifier());
             } else {
                 advance(); // fases seguintes vão tratar os outros casos
             }
@@ -115,31 +117,50 @@ public class Scanner {
 
     // ── FASE 2: Strings ─────────────────────────────────────────────
 
-/**
- * Lê uma string entre aspas duplas.
- * O lexema NÃO inclui as aspas — só o conteúdo.
- *
- * Antes de chamar este método, peek() == '"'
- */
-private Token readString() {
-    advance(); // consome a aspa inicial — não faz parte do lexema
-    int start = current;
+    /**
+     * Lê uma string entre aspas duplas.
+     * O lexema NÃO inclui as aspas — só o conteúdo.
+     *
+     * Antes de chamar este método, peek() == '"'
+     */
+    private Token readString() {
+        advance(); // consome a aspa inicial — não faz parte do lexema
+        int start = current;
 
-    while (peek() != '"' && peek() != '\0') {
-        if (peek() == '\n') {
-            throw new RuntimeException(
-                "String não fechada na linha " + line + ": quebra de linha não permitida"
-            );
+        while (peek() != '"' && peek() != '\0') {
+            if (peek() == '\n') {
+                throw new RuntimeException(
+                    "String não fechada na linha " + line + ": quebra de linha não permitida"
+                );
+            }
+            advance();
         }
-        advance();
+
+        if (peek() == '\0') {
+            throw new RuntimeException("String não fechada na linha " + line + ": fim de arquivo inesperado");
+        }
+
+        String lexeme = code.substring(start, current);
+        advance(); // consome a aspa final — não faz parte do lexema
+        return new Token(TokenType.STRING, lexeme, line);
     }
 
-    if (peek() == '\0') {
-        throw new RuntimeException("String não fechada na linha " + line + ": fim de arquivo inesperado");
-    }
+    // ── FASE 3: Identificadores e Keywords ──────────────────────────
 
-    String lexeme = code.substring(start, current);
-    advance(); // consome a aspa final — não faz parte do lexema
-    return new Token(TokenType.STRING, lexeme, line);
-}
+    /**
+     * Lê um identificador ou keyword.
+     * Ambos seguem o padrão: [a-zA-Z_][a-zA-Z0-9_]*
+     *
+     * Após ler a palavra, consulta o dicionário KEYWORDS.
+     * Se estiver lá → é keyword. Senão → é identificador (IDENT).
+     */
+    private Token readIdentifier() {
+        int start = current;
+        while (Character.isLetterOrDigit(peek()) || peek() == '_') {
+            advance();
+        }
+        String lexeme = code.substring(start, current);
+        TokenType type = KEYWORDS.getOrDefault(lexeme, TokenType.IDENT);
+        return new Token(type, lexeme, line);
+    }
 }

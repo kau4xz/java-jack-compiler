@@ -62,5 +62,45 @@ public class ScannerTest {
     void string_nao_fechada_lanca_excecao() {
         // Se a string não fechar, deve lançar RuntimeException
         assertThrows(RuntimeException.class, () -> tokenize("\"aberta"));
-}
+    }
+
+    // ── FASE 3: Identificadores e Keywords ──────────────────────────
+
+    @Test
+    void identificador_simples() {
+        List<Token> tokens = tokenize("minhaVar");
+        assertEquals(TokenType.IDENT, tokens.get(0).type);
+        assertEquals("<identifier> minhaVar </identifier>", tokens.get(0).toXml());
+    }
+
+    @Test
+    void identificador_com_numeros_e_underscore() {
+        List<Token> tokens = tokenize("var_1");
+        assertEquals(TokenType.IDENT, tokens.get(0).type);
+        assertEquals("var_1", tokens.get(0).lexeme);
+    }
+
+    @Test
+    void keyword_class_reconhecida() {
+        List<Token> tokens = tokenize("class");
+        assertEquals(TokenType.CLASS, tokens.get(0).type);
+        assertEquals("<keyword> class </keyword>", tokens.get(0).toXml());
+    }
+
+    @Test
+    void todas_keywords_reconhecidas() {
+        // Garante que nenhuma keyword foi esquecida no mapa KEYWORDS
+        String[] palavras = {
+            "class","constructor","function","method","field","static",
+            "var","int","char","boolean","void","true","false","null",
+            "this","let","do","if","else","while","return"
+        };
+        for (String palavra : palavras) {
+            List<Token> tokens = tokenize(palavra);
+            assertTrue(
+                tokens.get(0).type.isKeyword(),
+                "'" + palavra + "' deveria ser keyword"
+            );
+        }
+    }
 }
