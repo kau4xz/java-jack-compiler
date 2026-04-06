@@ -92,8 +92,6 @@ public class Scanner {
 
     // ── Loop principal ────────────────────────────────────────────────
 
-    // ── Loop principal ────────────────────────────────────────────────
-
     public List<Token> tokenize() {
         while (current < code.length()) {
             skipWhitespace();
@@ -101,14 +99,34 @@ public class Scanner {
 
             char ch = peek();
 
-            if (Character.isDigit(ch)) {
+            // 1. Comentários (DEVE vir antes de verificar símbolos, pois '/' é um símbolo)
+            if (ch == '/' && peek(1) == '/') {
+                skipLineComment();
+                continue;
+            } else if (ch == '/' && peek(1) == '*') {
+                skipBlockComment();
+                continue;
+            }
+            // 2. Números
+            else if (Character.isDigit(ch)) {
                 tokens.add(readNumber());
-            } else if (ch == '"') {
+            }
+            // 3. Strings
+            else if (ch == '"') {
                 tokens.add(readString());
-            } else if (Character.isLetter(ch) || ch == '_') {
+            }
+            // 4. Identificadores e Keywords
+            else if (Character.isLetter(ch) || ch == '_') {
                 tokens.add(readIdentifier());
-            } else {
-                advance(); // fases seguintes vão tratar os outros casos
+            }
+            // 5. Símbolos
+            else if (SYMBOLS.containsKey(ch)) {
+                tokens.add(new Token(SYMBOLS.get(ch), String.valueOf(ch), line));
+                advance();
+            }
+            // 6. Caracteres não reconhecidos
+            else {
+                advance(); 
             }
         }
         tokens.add(new Token(TokenType.EOF, "", line));
@@ -120,7 +138,6 @@ public class Scanner {
     /**
      * Lê uma string entre aspas duplas.
      * O lexema NÃO inclui as aspas — só o conteúdo.
-     *
      * Antes de chamar este método, peek() == '"'
      */
     private Token readString() {
@@ -150,9 +167,7 @@ public class Scanner {
     /**
      * Lê um identificador ou keyword.
      * Ambos seguem o padrão: [a-zA-Z_][a-zA-Z0-9_]*
-     *
      * Após ler a palavra, consulta o dicionário KEYWORDS.
-     * Se estiver lá → é keyword. Senão → é identificador (IDENT).
      */
     private Token readIdentifier() {
         int start = current;
@@ -162,5 +177,55 @@ public class Scanner {
         String lexeme = code.substring(start, current);
         TokenType type = KEYWORDS.getOrDefault(lexeme, TokenType.IDENT);
         return new Token(type, lexeme, line);
+    }
+
+    // ── FASE 5: Comentários ──────────────────────────────────────────
+
+    /**
+     * Ignora um comentário de linha (// até \n).
+     * Chamado quando peek()=='/'  && peek(1)=='/'
+     */
+    private void skipLineComment() {
+        // Avança até encontrar \n ou fim de arquivo
+        while (peek() != '\n' && peek() != '\0') {
+            advance();
+        }
+        // Consome o \n e conta a linha
+        if (peek() == '\n') {
+            line++;
+            advance();
+        }
+    }
+
+    /**
+     * Ignora um comentário de bloco (/* até *\/).
+     * Chamado quando peek()=='/' && peek(1)=='*'
+     * Suporta múltiplas linhas.
+     */
+    private void skipBlockComment() {
+        advance(); // consome '/'
+        advance(); // consome '*'
+
+        while (true) {
+            char c = peek();
+
+            if (c == '\0') {
+                throw new RuntimeException(
+                    "Comentário /* não fechado — fim de arquivo na linha " + line
+                );
+            }
+            if (c == '\n') {
+                line++;
+                advance();
+                continue;
+            }
+            // Detecta o fechamento '*/'
+            if (c == '*' && peek(1) == '/') {
+                advance(); // consome '*'
+                advance(); // consome '/'
+                break;
+            }
+            advance();
+        }
     }
 }
