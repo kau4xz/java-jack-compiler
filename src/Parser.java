@@ -101,4 +101,137 @@ public class Parser {
         parseClass();
         return xml.toString();
     }
+
+    // ── Fase 1: class e classVarDec ─────────────────────────────────────
+
+private void parseClass() {
+    openTag("class");
+
+    consumeLexeme("class");           // keyword 'class'
+    consume(TokenType.IDENT);         // nome da classe (ex: Square)
+    consumeLexeme("{");               // abre bloco
+
+    // classVarDec* — zero ou mais declarações de variáveis de classe
+    while (checkLexeme("static") || checkLexeme("field")) {
+        parseClassVarDec();
+    }
+
+    // subroutineDec* — zero ou mais declarações de subrotinas
+    while (checkLexeme("constructor") || checkLexeme("function") || checkLexeme("method")) {
+        parseSubroutineDec();
+    }
+
+    consumeLexeme("}");               // fecha bloco
+
+    closeTag("class");
 }
+
+private void parseClassVarDec() {
+    openTag("classVarDec");
+
+    writeToken(advance());     // 'static' ou 'field'
+    parseType();               // tipo: int | char | boolean | className
+    consume(TokenType.IDENT);  // primeiro varName
+
+    // (',' varName)* — mais variáveis na mesma declaração
+    while (checkLexeme(",")) {
+        consumeLexeme(",");
+        consume(TokenType.IDENT);
+    }
+
+    consumeLexeme(";");
+
+    closeTag("classVarDec");
+}
+
+/**
+ * Escreve o token de tipo: int, char, boolean ou um identificador de classe.
+ * Não abre tag própria — tipo é sempre parte de uma tag maior.
+ */
+private void parseType() {
+    if (checkLexeme("int") || checkLexeme("char") || checkLexeme("boolean")) {
+        writeToken(advance());   // keyword
+    } else {
+        consume(TokenType.IDENT); // className
+    }
+}
+
+// ── Fase 2: subroutineDec ───────────────────────────────────────────
+
+private void parseSubroutineDec() {
+    openTag("subroutineDec");
+
+    writeToken(advance());      // 'constructor' | 'function' | 'method'
+
+    // tipo de retorno: 'void' ou um tipo qualquer
+    if (checkLexeme("void")) {
+        writeToken(advance());
+    } else {
+        parseType();
+    }
+
+    consume(TokenType.IDENT);   // nome da subrotina
+    consumeLexeme("(");
+
+    parseParameterList();
+
+    consumeLexeme(")");
+
+    parseSubroutineBody();
+
+    closeTag("subroutineDec");
+}
+
+private void parseParameterList() {
+    openTag("parameterList");
+
+    // A lista pode ser vazia — verifica se não é ')'
+    if (!checkLexeme(")")) {
+        parseType();
+        consume(TokenType.IDENT);
+
+        while (checkLexeme(",")) {
+            consumeLexeme(",");
+            parseType();
+            consume(TokenType.IDENT);
+        }
+    }
+
+    closeTag("parameterList");
+}
+
+private void parseSubroutineBody() {
+    openTag("subroutineBody");
+
+    consumeLexeme("{");
+
+    // varDec* — zero ou mais declarações locais
+    while (checkLexeme("var")) {
+        parseVarDec();
+    }
+
+    parseStatements();
+
+    consumeLexeme("}");
+
+    closeTag("subroutineBody");
+}
+
+private void parseVarDec() {
+    openTag("varDec");
+
+    consumeLexeme("var");
+    parseType();
+    consume(TokenType.IDENT);
+
+    while (checkLexeme(",")) {
+        consumeLexeme(",");
+        consume(TokenType.IDENT);
+    }
+
+    consumeLexeme(";");
+
+    closeTag("varDec");
+}
+}
+
