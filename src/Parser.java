@@ -233,5 +233,220 @@ private void parseVarDec() {
 
     closeTag("varDec");
 }
+
+// ── Fase 3: statements ──────────────────────────────────────────────
+
+private void parseStatements() {
+    openTag("statements");
+
+    // Despacha para o tipo correto baseado na keyword atual
+    while (checkLexeme("let") || checkLexeme("if") ||
+           checkLexeme("while") || checkLexeme("do") ||
+           checkLexeme("return")) {
+
+        if      (checkLexeme("let"))    parseLet();
+        else if (checkLexeme("if"))     parseIf();
+        else if (checkLexeme("while"))  parseWhile();
+        else if (checkLexeme("do"))     parseDo();
+        else                            parseReturn();
+    }
+
+    closeTag("statements");
+}
+
+private void parseLet() {
+    openTag("letStatement");
+
+    consumeLexeme("let");
+    consume(TokenType.IDENT);          // varName
+
+    // ('[' expression ']')? — acesso a array, opcional
+    if (checkLexeme("[")) {
+        consumeLexeme("[");
+        parseExpression();
+        consumeLexeme("]");
+    }
+
+    consumeLexeme("=");
+    parseExpression();
+    consumeLexeme(";");
+
+    closeTag("letStatement");
+}
+
+private void parseIf() {
+    openTag("ifStatement");
+
+    consumeLexeme("if");
+    consumeLexeme("(");
+    parseExpression();
+    consumeLexeme(")");
+    consumeLexeme("{");
+    parseStatements();
+    consumeLexeme("}");
+
+    // ('else' '{' statements '}')? — opcional
+    if (checkLexeme("else")) {
+        consumeLexeme("else");
+        consumeLexeme("{");
+        parseStatements();
+        consumeLexeme("}");
+    }
+
+    closeTag("ifStatement");
+}
+
+private void parseWhile() {
+    openTag("whileStatement");
+
+    consumeLexeme("while");
+    consumeLexeme("(");
+    parseExpression();
+    consumeLexeme(")");
+    consumeLexeme("{");
+    parseStatements();
+    consumeLexeme("}");
+
+    closeTag("whileStatement");
+}
+
+private void parseDo() {
+    openTag("doStatement");
+
+    consumeLexeme("do");
+    parseSubroutineCall();            // método ou função
+    consumeLexeme(";");
+
+    closeTag("doStatement");
+}
+
+private void parseReturn() {
+    openTag("returnStatement");
+
+    consumeLexeme("return");
+
+    // expression? — opcional: pode ser 'return;' ou 'return x;'
+    if (!checkLexeme(";")) {
+        parseExpression();
+    }
+
+    consumeLexeme(";");
+
+    closeTag("returnStatement");
+}
+
+// ── Fase 4: expression e term ───────────────────────────────────────
+
+private static final java.util.Set<String> OPS =
+    java.util.Set.of("+", "-", "*", "/", "&", "|", "<", ">", "=");
+
+private void parseExpression() {
+    openTag("expression");
+
+    parseTerm();
+
+    // (op term)* — operações encadeadas
+    while (OPS.contains(peek().lexeme)) {
+        writeToken(advance());   // escreve o operador
+        parseTerm();
+    }
+
+    closeTag("expression");
+}
+
+private void parseTerm() {
+    openTag("term");
+
+    Token t = peek();
+
+    if (t.type == TokenType.NUMBER) {
+        // integerConstant
+        writeToken(advance());
+
+    } else if (t.type == TokenType.STRING) {
+        // stringConstant
+        writeToken(advance());
+
+    } else if (t.lexeme.equals("true") || t.lexeme.equals("false") ||
+               t.lexeme.equals("null") || t.lexeme.equals("this")) {
+        // keywordConstant
+        writeToken(advance());
+
+    } else if (t.lexeme.equals("(")) {
+        // '(' expression ')' — agrupamento com parênteses
+        consumeLexeme("(");
+        parseExpression();
+        consumeLexeme(")");
+
+    } else if (t.lexeme.equals("-") || t.lexeme.equals("~")) {
+        // unaryOp term — negação ou complemento
+        writeToken(advance());
+        parseTerm();
+
+    } else if (t.type == TokenType.IDENT) {
+        // Pode ser: varName | varName '[' expr ']' | subroutineCall
+        // Precisamos espiar o token SEGUINTE para decidir
+        Token next = (pos + 1 < tokens.size()) ? tokens.get(pos + 1) : peek();
+
+        if (next.lexeme.equals("[")) {
+            // varName '[' expression ']' — acesso a array
+            consume(TokenType.IDENT);
+            consumeLexeme("[");
+            parseExpression();
+            consumeLexeme("]");
+
+        } else if (next.lexeme.equals("(") || next.lexeme.equals(".")) {
+            // subroutineCall — chamada de função/método
+            parseSubroutineCall();
+
+        } else {
+            // varName simples
+            consume(TokenType.IDENT);
+        }
+
+    } else {
+        throw new RuntimeException(
+            "Linha " + t.line + ": termo inesperado '" + t.lexeme + "'"
+        );
+    }
+
+    closeTag("term");
+}
+
+/**
+ * subroutineCall: subroutineName '(' expressionList ')'
+ *               | (className | varName) '.' subroutineName '(' expressionList ')'
+ *
+ * Não abre tag própria — é chamado dentro de doStatement ou parseTerm.
+ */
+private void parseSubroutineCall() {
+    consume(TokenType.IDENT);   // subroutineName | className | varName
+
+    if (checkLexeme(".")) {
+        // className.method() ou obj.method()
+        consumeLexeme(".");
+        consume(TokenType.IDENT); // subroutineName
+    }
+
+    consumeLexeme("(");
+    parseExpressionList();
+    consumeLexeme(")");
+}
+
+private void parseExpressionList() {
+    openTag("expressionList");
+
+    // Pode ser vazia: f()
+    if (!checkLexeme(")")) {
+        parseExpression();
+
+        while (checkLexeme(",")) {
+            consumeLexeme(",");
+            parseExpression();
+        }
+    }
+
+    closeTag("expressionList");
+}
 }
 

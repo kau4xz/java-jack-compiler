@@ -76,4 +76,72 @@ void varDec_local() {
     assertTrue(xml.contains("<varDec>"));
     assertTrue(xml.contains("<keyword> var </keyword>"));
 }
+
+// ── Fase 3: statements ──────────────────────────────────────────────
+
+@Test
+void let_simples() {
+    String xml = parse("class F { function void f() { let x = 5; } }");
+    assertTrue(xml.contains("<letStatement>"));
+    assertTrue(xml.contains("<keyword> let </keyword>"));
+}
+
+@Test
+void if_com_else() {
+    String xml = parse("class F { function void f() { if (x) { let y = 1; } else { let y = 2; } } }");
+    assertTrue(xml.contains("<ifStatement>"));
+    // Deve ter 2 blocos de statements
+    long count = xml.lines().filter(l -> l.contains("<statements>")).count();
+    assertEquals(3, count); // 1 do subroutineBody + 2 do if/else
+}
+
+@Test
+void while_basico() {
+    String xml = parse("class F { function void f() { while (x) { let x = 0; } } }");
+    assertTrue(xml.contains("<whileStatement>"));
+}
+
+@Test
+void return_sem_expressao() {
+    String xml = parse("class F { function void f() { return; } }");
+    assertTrue(xml.contains("<returnStatement>"));
+}
+
+// ── Fase 4: expression e term ───────────────────────────────────────
+
+@Test
+void expression_inteiro() {
+    String xml = parse("class F { function void f() { let x = 42; } }");
+    assertTrue(xml.contains("<expression>"));
+    assertTrue(xml.contains("<term>"));
+    assertTrue(xml.contains("<integerConstant> 42 </integerConstant>"));
+}
+
+@Test
+void expression_com_operador() {
+    String xml = parse("class F { function void f() { let x = a + b; } }");
+    assertTrue(xml.contains("<symbol> + </symbol>"));
+    // dois terms dentro da expression
+    long terms = xml.lines().filter(l -> l.strip().equals("<term>")).count();
+    assertEquals(2, terms);
+}
+
+@Test
+void term_acesso_array() {
+    String xml = parse("class F { function void f() { let y = a[0]; } }");
+    assertTrue(xml.contains("<symbol> [ </symbol>"));
+}
+
+@Test
+void term_chamada_metodo() {
+    String xml = parse("class F { function void f() { do Output.printInt(x); } }");
+    assertTrue(xml.contains("<doStatement>"));
+    assertTrue(xml.contains("<expressionList>"));
+}
+
+@Test
+void term_unary_negacao() {
+    String xml = parse("class F { function void f() { let x = -y; } }");
+    assertTrue(xml.contains("<symbol> - </symbol>"));
+}
 }
