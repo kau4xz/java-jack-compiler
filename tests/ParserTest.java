@@ -1,5 +1,9 @@
 // tests/ParserTest.java
 import org.junit.jupiter.api.*;
+
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
@@ -143,5 +147,61 @@ void term_chamada_metodo() {
 void term_unary_negacao() {
     String xml = parse("class F { function void f() { let x = -y; } }");
     assertTrue(xml.contains("<symbol> - </symbol>"));
+}
+
+
+// ── Validação contra arquivos oficiais ──────────────────────────────
+
+private String normalizeXml(String content) {
+    return content.lines()
+        .map(String::stripLeading)
+        .filter(l -> !l.isEmpty())
+        .collect(Collectors.joining("\n"));
+}
+
+@Test
+void valida_Main_jack_contra_oficial() throws Exception {
+    String jackPath    = "tests/nand2tetris/projects/10/Square/Main.jack";
+    String expectedPath = "tests/nand2tetris/projects/10/Square/Main.xml";
+
+    String code = Files.readString(Path.of(jackPath));
+    List<Token> tokens = new Scanner(code).tokenize();
+    String generated = new Parser(tokens).parse();
+
+    String expected  = normalizeXml(Files.readString(Path.of(expectedPath)));
+    String actual    = normalizeXml(generated);
+
+    assertEquals(expected, actual, "Saída diferente de Main.xml");
+}
+
+@Test
+void valida_Square_jack_contra_oficial() throws Exception {
+    String jackPath    = "tests/nand2tetris/projects/10/Square/Square.jack";
+    String expectedPath = "tests/nand2tetris/projects/10/Square/Square.xml";
+
+    String code = Files.readString(Path.of(jackPath));
+    List<Token> tokens = new Scanner(code).tokenize();
+    String generated = new Parser(tokens).parse();
+
+    assertEquals(
+        normalizeXml(Files.readString(Path.of(expectedPath))),
+        normalizeXml(generated),
+        "Saída diferente de Square.xml"
+    );
+}
+@Test
+void valida_SquareGame_jack_contra_oficial() throws Exception {
+    String jackPath     = "tests/nand2tetris/projects/10/Square/SquareGame.jack";
+    String expectedPath = "tests/nand2tetris/projects/10/Square/SquareGame.xml";
+
+    String code        = Files.readString(Path.of(jackPath));
+    List<Token> tokens = new Scanner(code).tokenize();
+    String generated   = new Parser(tokens).parse();
+
+    assertEquals(
+        normalizeXml(Files.readString(Path.of(expectedPath))),
+        normalizeXml(generated),
+        "Saída diferente de SquareGame.xml"
+    );
 }
 }
